@@ -22,12 +22,14 @@ const CrearTicket = () => {
   })
 
   // --- ESTILOS COMUNES ---
-  const containerStyle = {
-    maxWidth: '700px',
+ const containerStyle = {
+    // CAMBIO CLAVE: Aumentamos de '700px' a '1000px' (o el valor que prefieras)
+    maxWidth: '1000px',
+    width: '95%', // Esto asegura que en móviles no toque los bordes
     margin: '0 auto',
-    padding: '2rem',
+    padding: '3rem', // Aumentamos un poco el padding para que se vea más espacioso
     backgroundColor: '#ffffff',
-    borderRadius: '16px',
+    borderRadius: '24px', // Bordes un poco más redondeados para un look más moderno
     boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)'
   }
 
