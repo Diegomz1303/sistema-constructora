@@ -3,18 +3,22 @@ import { useState } from 'react'
 import { supabase } from '../services/supabase'
 import { useNavigate } from 'react-router-dom'
 import { Toaster, toast } from 'react-hot-toast'
-import { Mail, Lock, HardHat, ArrowRight } from 'lucide-react' // Iconos para mejor UI
+import { Mail, Lock, HardHat, ArrowRight, Eye, EyeOff } from 'lucide-react'
 
 const Login = () => {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  
+  // Estado para controlar la visibilidad de la contraseña
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
 
+    // --- CORRECCIÓN AQUÍ ---
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -24,7 +28,6 @@ const Login = () => {
       toast.error('Credenciales incorrectas')
       setLoading(false)
     } else {
-      // Redirección exitosa
       navigate('/dashboard')
     }
   }
@@ -35,7 +38,7 @@ const Login = () => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f1f5f9', // Fondo gris muy claro
+    backgroundColor: '#f1f5f9',
     padding: '1rem'
   }
 
@@ -62,9 +65,9 @@ const Login = () => {
     color: '#94a3b8'
   }
 
-  const inputStyle = {
+  // Estilo base para inputs
+  const baseInputStyle = {
     width: '100%',
-    padding: '0.9rem 1rem 0.9rem 2.8rem', // Padding izquierdo extra para el icono
     borderRadius: '12px',
     border: '2px solid #e2e8f0',
     fontSize: '1rem',
@@ -74,12 +77,27 @@ const Login = () => {
     backgroundColor: '#f8fafc'
   }
 
+  // Estilo específico para el botón del ojo
+  const eyeButtonStyle = {
+    position: 'absolute',
+    right: '14px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: '#94a3b8',
+    padding: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }
+
   return (
     <div style={pageStyle}>
       <Toaster position="top-center" />
 
       <div style={cardStyle} className="animate-fade-in">
-        {/* LOGO / HEADER */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ 
             display: 'inline-flex', padding: '16px', borderRadius: '20px', 
@@ -95,22 +113,24 @@ const Login = () => {
           </p>
         </div>
 
-        {/* FORMULARIO */}
-        <form onSubmit={handleLogin} style={{ textAlign: 'left' }}>
+        <form onSubmit={handleLogin} style={{ textAlign: 'left' }} autoComplete="on">
           
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>
+            <label htmlFor="email" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>
               Correo Corporativo
             </label>
             <div style={inputContainerStyle}>
               <Mail size={20} style={iconStyle} />
               <input
+                id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="nombre@constructora.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                style={inputStyle}
+                style={{ ...baseInputStyle, padding: '0.9rem 1rem 0.9rem 2.8rem' }}
                 onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.backgroundColor = 'white' }}
                 onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.backgroundColor = '#f8fafc' }}
               />
@@ -118,21 +138,35 @@ const Login = () => {
           </div>
 
           <div style={{ marginBottom: '2rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>
+            <label htmlFor="password" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>
               Contraseña
             </label>
             <div style={inputContainerStyle}>
               <Lock size={20} style={iconStyle} />
+              
               <input
-                type="password"
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                style={inputStyle}
+                style={{ ...baseInputStyle, padding: '0.9rem 2.8rem 0.9rem 2.8rem' }}
                 onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.backgroundColor = 'white' }}
                 onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.backgroundColor = '#f8fafc' }}
               />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={eyeButtonStyle}
+                tabIndex="-1"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
           </div>
 
@@ -140,21 +174,11 @@ const Login = () => {
             type="submit" 
             disabled={loading} 
             style={{
-              width: '100%',
-              padding: '1rem',
-              borderRadius: '12px',
-              border: 'none',
-              backgroundColor: '#3b82f6', // Azul primario consistente
-              color: 'white',
-              fontSize: '1.1rem',
-              fontWeight: '700',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              transition: 'all 0.2s',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+              width: '100%', padding: '1rem', borderRadius: '12px', border: 'none',
+              backgroundColor: '#3b82f6', color: 'white', fontSize: '1.1rem',
+              fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: '10px', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
             }}
             onMouseOver={(e) => !loading && (e.currentTarget.style.transform = 'translateY(-2px)', e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.35)')}
             onMouseOut={(e) => !loading && (e.currentTarget.style.transform = 'translateY(0)', e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.25)')}
@@ -166,7 +190,6 @@ const Login = () => {
 
         </form>
 
-        {/* FOOTER */}
         <p style={{ marginTop: '2.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
           ¿Problemas para acceder? <br/> Contacta directamente al Ingeniero Residente.
         </p>

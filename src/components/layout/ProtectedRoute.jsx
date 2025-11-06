@@ -6,16 +6,26 @@ const ProtectedRoute = () => {
   const { user, loading } = useAuth()
 
   if (loading) {
-    // Puedes poner aquí un spinner bonito luego
-    return <div>Cargando sesión...</div>
+    // Un spinner simple centrado para evitar "flashes" de contenido
+    return (
+      <div style={{ 
+        height: '100vh', 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        color: '#64748b',
+        fontFamily: 'sans-serif'
+      }}>
+        Verificando credenciales... 🔒
+      </div>
+    )
   }
 
-  // Si no hay usuario, lo mandamos al login
+  // Si no hay usuario autenticado, patada al login de inmediato
   if (!user) {
     return <Navigate to="/login" replace />
   }
 
-  // Si hay usuario, dejamos que vea la página (Outlet renderiza la ruta hija)
   return <Outlet />
 }
 
