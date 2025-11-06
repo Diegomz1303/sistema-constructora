@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import TicketCard from '../../components/tickets/TicketCard'
 import Modal from '../../components/common/Modal'
 import TicketChat from '../../components/tickets/TicketChat'
+import { Toaster, toast } from 'react-hot-toast'
 
 const WorkerDashboard = () => {
   const { user, signOut } = useAuth()
@@ -17,7 +18,6 @@ const WorkerDashboard = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
   const fetchMyTickets = async () => {
-    setLoading(true)
     let query = supabase
       .from('tickets')
       .select('*')
@@ -31,10 +31,31 @@ const WorkerDashboard = () => {
     setLoading(false)
   }
 
-  useEffect(() => { if(user) fetchMyTickets() }, [filter, user])
+  // --- EFECTO CON TIEMPO REAL ---
+  useEffect(() => {
+    if (!user) return
+    fetchMyTickets()
+
+    // Suscribirse solo a cambios que afecten a ESTE usuario (opcional, pero más eficiente)
+    // Por simplicidad, escuchamos todo y filtramos en el fetchMyTickets
+    const channel = supabase
+      .channel('realtime my tickets')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, (payload) => {
+        // Si alguien actualizó UNO DE MIS tickets (ej: el ingeniero lo aprobó)
+        if (payload.eventType === 'UPDATE' && payload.new.user_email === user.email) {
+            const newStatus = payload.new.status.toUpperCase();
+            toast(`Tu ticket ha sido actualizado a: ${newStatus}`, { icon: '📬' })
+        }
+        fetchMyTickets()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [filter, user])
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '1rem' }}>
+      <Toaster position="top-center" />
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid #eee', paddingBottom: '1rem' }}>
         <div>
            <h2 style={{ color: '#2c3e50', margin: 0 }}>🔨 Mis Reportes</h2>
@@ -76,18 +97,11 @@ const WorkerDashboard = () => {
         {selectedTicket && (
           <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
             <h3 style={{margin:0}}>{selectedTicket.title}</h3>
-
-            {/* --- NUEVO --- MOSTRAR LA IMAGEN SI EXISTE */}
             {selectedTicket.image_url && (
-              <a href={selectedTicket.image_url} target="_blank" rel="noopener noreferrer" title="Ver imagen completa">
-                <img 
-                  src={selectedTicket.image_url} 
-                  alt="Evidencia del ticket" 
-                  style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '12px', border: '1px solid #eee' }} 
-                />
+              <a href={selectedTicket.image_url} target="_blank" rel="noopener noreferrer">
+                <img src={selectedTicket.image_url} alt="Evidencia" style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '12px', border: '1px solid #eee' }} />
               </a>
             )}
-
             <p style={{background:'#f9f9f9', padding:'1rem', borderRadius:'8px', margin:0}}>{selectedTicket.description}</p>
             {selectedTicket.engineer_response && <div style={{background:'#e8f5e9', padding:'1rem', borderRadius:'8px', borderLeft:'4px solid green'}}><strong>Respuesta Oficial:</strong><p style={{margin:0}}>{selectedTicket.engineer_response}</p></div>}
             <TicketChat ticketId={selectedTicket.id} />

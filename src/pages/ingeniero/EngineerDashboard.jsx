@@ -17,8 +17,9 @@ const EngineerDashboard = () => {
   const [isResponseOpen, setIsResponseOpen] = useState(false)
   const [responseText, setResponseText] = useState('')
 
+  // Función para cargar tickets
   const fetchAllTickets = async () => {
-    setLoading(true)
+    // No ponemos setLoading(true) aquí para evitar parpadeos molestos en cada actualización real
     let query = supabase
       .from('tickets')
       .select('*')
@@ -28,10 +29,34 @@ const EngineerDashboard = () => {
 
     const { data } = await query
     if (data) setTickets(data)
-    setLoading(false)
+    setLoading(false) // Solo quitamos el loading la primera vez
   }
 
-  useEffect(() => { if(user) fetchAllTickets() }, [filter, user])
+  // --- EFECTO PRINCIPAL: Carga inicial + SUSCRIPCIÓN A TIEMPO REAL ---
+  useEffect(() => {
+    if (!user) return
+
+    // 1. Carga inicial
+    fetchAllTickets()
+
+    // 2. Suscripción a cambios en la tabla 'tickets'
+    const channel = supabase
+      .channel('realtime tickets')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, (payload) => {
+        // Si es un ticket NUEVO, avisamos con un toast
+        if (payload.eventType === 'INSERT') {
+           toast('🔔 ¡Nuevo ticket recibido!', { icon: '👷' })
+        }
+        // Recargamos la lista para ver los cambios
+        fetchAllTickets()
+      })
+      .subscribe()
+
+    // Limpieza al salir de la página
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [filter, user]) // Se vuelve a suscribir si cambias el filtro
 
   const handleUpdateStatus = async (newStatus) => {
     if (!responseText.trim() && newStatus === 'rechazado') return toast.error('Indica el motivo del rechazo')
@@ -39,7 +64,7 @@ const EngineerDashboard = () => {
     await supabase.from('tickets').update({ status: newStatus, engineer_response: responseText }).eq('id', selectedTicket.id)
     toast.success(`Ticket ${newStatus.toUpperCase()}`, { id: toastId })
     setIsResponseOpen(false)
-    fetchAllTickets()
+    // No hace falta llamar a fetchAllTickets() aquí porque el realtime lo hará solo ;)
   }
 
   return (
@@ -62,11 +87,11 @@ const EngineerDashboard = () => {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>Cargando reportes...</div>
+        <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>Cargando reportes en vivo...</div>
       ) : tickets.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'white', borderRadius: '16px', color: '#b0bec5', boxShadow: '0 4px 6px rgba(0,0,0,0.04)' }}>
             <span style={{ fontSize: '4rem', display: 'block', marginBottom: '1rem', opacity: 0.5 }}>✅</span>
-            <p style={{ fontSize: '1.2rem', margin: 0 }}>¡Todo al día! No hay tickets "{filter}".</p>
+            <p style={{ fontSize: '1.2rem', margin: 0 }}>¡Todo al día! Esperando nuevos reportes...</p>
         </div>
       ) : (
          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
@@ -80,18 +105,11 @@ const EngineerDashboard = () => {
          {selectedTicket && (
           <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
             <h3 style={{margin:0}}>{selectedTicket.title}</h3>
-
-            {/* --- NUEVO --- MOSTRAR LA IMAGEN SI EXISTE */}
             {selectedTicket.image_url && (
-              <a href={selectedTicket.image_url} target="_blank" rel="noopener noreferrer" title="Ver imagen completa">
-                <img 
-                  src={selectedTicket.image_url} 
-                  alt="Evidencia del ticket" 
-                  style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '12px', border: '1px solid #eee' }} 
-                />
+              <a href={selectedTicket.image_url} target="_blank" rel="noopener noreferrer">
+                <img src={selectedTicket.image_url} alt="Evidencia" style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '12px', border: '1px solid #eee' }} />
               </a>
             )}
-
             <p style={{background:'#f9f9f9', padding:'1rem', borderRadius:'8px', margin:0}}>{selectedTicket.description}</p>
             {selectedTicket.engineer_response && <div style={{background:'#e8f5e9', padding:'1rem', borderRadius:'8px', borderLeft:'4px solid green'}}><strong>Respuesta:</strong><p style={{margin:0}}>{selectedTicket.engineer_response}</p></div>}
             <TicketChat ticketId={selectedTicket.id} />
