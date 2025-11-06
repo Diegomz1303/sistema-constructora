@@ -1,15 +1,8 @@
 // src/pages/ingeniero/GestionUsuarios.jsx
 import { useState } from 'react'
+// Usamos el cliente normal, ya no creamos uno admin aquí
 import { supabase } from '../../services/supabase'
-import { createClient } from '@supabase/supabase-js'
 import { Toaster, toast } from 'react-hot-toast'
-
-// Cliente Admin
-const supabaseAdmin = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_SERVICE_KEY,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
 
 const GestionUsuarios = () => {
   const [newUserLoading, setNewUserLoading] = useState(false)
@@ -25,21 +18,29 @@ const GestionUsuarios = () => {
     const toastId = toast.loading('Creando usuario...')
 
     try {
-      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
-        email: newUserForm.email,
-        password: newUserForm.password,
-        email_confirm: true,
+      // --- CAMBIO IMPORTANTE ---
+      // En lugar de usar supabaseAdmin.auth.admin.createUser directamente,
+      // llamamos a la Edge Function que creamos en el paso anterior.
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: newUserForm
       })
-      if (userError) throw userError
 
-      if (newUserForm.role === 'ingeniero' && userData.user) {
-        await supabaseAdmin.from('profiles').update({ role: 'ingeniero' }).eq('id', userData.user.id)
-      }
+      if (error) throw new Error(error.message || 'Error al conectar con el servidor')
+      if (data?.error) throw new Error(data.error)
 
       toast.success(`✅ Usuario ${newUserForm.email} creado`, { id: toastId })
       setNewUserForm({ email: '', password: '', role: 'trabajador' })
+
     } catch (error) {
-      toast.error('❌ Error: ' + error.message, { id: toastId })
+      console.error('Error creando usuario:', error)
+      // Intentamos extraer un mensaje de error legible si viene en formato JSON
+      let errorMessage = error.message
+      try {
+         const parsed = JSON.parse(error.message)
+         if (parsed.error) errorMessage = parsed.error
+      } catch (e) { /* no es json, usar el mensaje original */ }
+
+      toast.error('❌ Error: ' + errorMessage, { id: toastId })
     } finally {
       setNewUserLoading(false)
     }
