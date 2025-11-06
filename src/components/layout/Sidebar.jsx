@@ -1,24 +1,23 @@
 // src/components/layout/Sidebar.jsx
 import { useState, useEffect } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { LayoutDashboard, FilePlus, Users, LogOut, Menu, X } from 'lucide-react'
+import './Sidebar.css' // <-- IMPORTANTE: Importar el nuevo archivo CSS
 
 const Sidebar = () => {
   const { user, role, signOut } = useAuth()
-  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
 
   const toggleSidebar = () => setIsOpen(!isOpen)
 
-  // --- NUEVO: BLOQUEAR SCROLL CUANDO ESTÁ ABIERTO EN MÓVIL ---
+  // Bloquear scroll cuando el menú móvil está abierto
   useEffect(() => {
     if (window.innerWidth <= 768 && isOpen) {
-       document.body.style.overflow = 'hidden' // Bloquea scroll del fondo
+       document.body.style.overflow = 'hidden'
     } else {
-       document.body.style.overflow = 'unset'  // Restaura scroll
+       document.body.style.overflow = 'unset'
     }
-    // Limpieza al desmontar
     return () => { document.body.style.overflow = 'unset' }
   }, [isOpen])
 
@@ -32,31 +31,12 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Botón móvil mejorado: position fixed para que no scrollee */}
-      <button 
-        onClick={toggleSidebar}
-        className="mobile-menu-btn"
-        style={{ 
-            position: 'fixed', 
-            top: '1rem', 
-            left: '1rem', 
-            zIndex: 110, // Mayor que el sidebar para estar siempre visible
-            background: 'white', 
-            border: 'none', 
-            borderRadius: '50%', // Redondo queda mejor
-            width: '45px',
-            height: '45px',
-            display: 'none', // Por defecto oculto en desktop
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-            cursor: 'pointer'
-        }}
-      >
-        {isOpen ? <X size={24} color="#2c3e50" /> : <Menu size={24}yb color="#2c3e50" />}
+      {/* Botón móvil ahora usa clase CSS */}
+      <button onClick={toggleSidebar} className="mobile-menu-btn">
+        {isOpen ? <X size={24} color="#2c3e50" /> : <Menu size={24} color="#2c3e50" />}
       </button>
 
-      {/* Overlay para cerrar al hacer click fuera */}
+      {/* Overlay */}
       <div 
           className={`sidebar-overlay ${isOpen ? 'active' : ''}`}
           onClick={() => setIsOpen(false)}
@@ -65,7 +45,7 @@ const Sidebar = () => {
       {/* Sidebar Principal */}
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <h2 style={{ color: '#2c3e50', margin: 0, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.5rem' }}>
+          <h2 className="sidebar-logo">
             🏗️ <span className="logo-text">ObraApp</span>
           </h2>
         </div>
@@ -75,7 +55,7 @@ const Sidebar = () => {
              {user?.email?.charAt(0).toUpperCase()}
           </div>
           <div className="user-info">
-            <p className="user-name" style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px'}}>
+            <p className="user-name">
                 {user?.email?.split('@')[0]}
             </p>
             <span className="user-role">
@@ -89,7 +69,7 @@ const Sidebar = () => {
             <NavLink 
               key={link.to} 
               to={link.to}
-              onClick={() => setIsOpen(false)} // Cierra el menú al hacer click en un link
+              onClick={() => setIsOpen(false)}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             >
               {link.icon}
