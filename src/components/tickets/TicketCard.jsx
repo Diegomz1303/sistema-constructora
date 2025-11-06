@@ -18,7 +18,6 @@ const getTypeIcon = (type) => {
   }
 }
 
-// AHORA RECIBIMOS LAS FUNCIONES onViewDetails y onApprove COMO PROPS
 const TicketCard = ({ ticket, onViewDetails, onApprove }) => {
   const colors = getPriorityColor(ticket.priority)
   const date = new Date(ticket.created_at).toLocaleDateString('es-PE', {
@@ -36,15 +35,17 @@ const TicketCard = ({ ticket, onViewDetails, onApprove }) => {
     onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.08)' }}
     onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)' }}
     >
-      
-      {/* Header: Icono, Título y Prioridad */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <span style={{ fontSize: '1.5rem', background: '#f8f9fa', padding: '8px', borderRadius: '12px' }}>
             {getTypeIcon(ticket.type)}
           </span>
           <div>
-             <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1rem', lineHeight: '1.3' }}>{ticket.title}</h3>
+             <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '1rem', lineHeight: '1.3', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                {ticket.title}
+                {/* --- NUEVO --- Ícono de cámara si hay foto */}
+                {ticket.image_url && <span title="Tiene foto adjunta">📸</span>}
+             </h3>
              <span style={{ fontSize: '0.75rem', color: '#90a4ae' }}>#{ticket.id}</span>
           </div>
         </div>
@@ -57,7 +58,6 @@ const TicketCard = ({ ticket, onViewDetails, onApprove }) => {
         </span>
       </div>
 
-      {/* Descripción corta (máximo 2 líneas) */}
       <p style={{ 
         color: '#546e7a', fontSize: '0.9rem', margin: '0', lineHeight: '1.5',
         display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis'
@@ -65,16 +65,14 @@ const TicketCard = ({ ticket, onViewDetails, onApprove }) => {
         {ticket.description}
       </p>
 
-      {/* Footer: Usuario y Fecha */}
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#b0bec5', marginTop: 'auto', paddingTop: '0.8rem' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>👤 {ticket.user_email.split('@')[0]}</span>
         <span>🕒 {date}</span>
       </div>
       
-      {/* Botones de Acción */}
       <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.8rem' }}>
         <button 
-          onClick={onViewDetails} // CONECTADO
+          onClick={onViewDetails}
           style={{ flex: 1, padding: '0.7rem', border: '1px solid #eceff1', background: 'white', color: '#546e7a', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.9rem', transition: 'all 0.2s' }}
           onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
           onMouseOut={(e) => e.target.style.background = 'white'}
@@ -82,9 +80,9 @@ const TicketCard = ({ ticket, onViewDetails, onApprove }) => {
             Ver Detalles
         </button>
         
-        {ticket.status === 'pendiente' && (
+        {ticket.status === 'pendiente' && onApprove && (
             <button 
-              onClick={onApprove} // CONECTADO
+              onClick={onApprove}
               style={{ flex: 1.2, padding: '0.7rem', border: 'none', background: '#007bff', color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.9rem', transition: 'background 0.2s' }}
               onMouseOver={(e) => e.target.style.background = '#0056b3'}
               onMouseOut={(e) => e.target.style.background = '#007bff'}
