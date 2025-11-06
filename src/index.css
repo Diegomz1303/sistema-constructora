@@ -1,37 +1,76 @@
-/* src/index.css - AÑADIR AL FINAL */
+/* src/index.css - BLOQUEO TOTAL DE SCROLL HORIZONTAL */
 
-/* --- LAYOUT PRINCIPAL --- */
-.app-layout {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f8f9fa; /* Fondo general más claro */
+:root {
+  /* Variables para mantener consistencia si deseas cambiarlos luego */
+  --sidebar-width: 260px;
+  --header-height: 60px; /* Si tuvieras un header fijo arriba */
 }
 
+/* 1. RESET BÁSICO */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 2. ESTRUCTURA DE APP A PANTALLA COMPLETA */
+html, body {
+  height: 100%;     /* Fuerza altura completa */
+  width: 100%;      /* Fuerza ancho exacto sin contar scrollbars */
+  overflow: hidden; /* Bloquea TODO scroll en el body */
+  font-family: system-ui, -apple-system, sans-serif;
+  background-color: #f8f9fa;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 3. LAYOUT PRINCIPAL */
+.app-layout {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden; /* El layout no scrollea, solo sus hijos */
+  position: relative;
+}
+
+/* 4. ÁREA DE CONTENIDO (Es la que hará scroll vertical) */
 .main-content {
   flex: 1;
+  height: 100%; /* Ocupa toda la altura disponible */
+  overflow-y: auto; /* Habilita scroll vertical AQUÍ */
+  overflow-x: hidden; /* Bloquea scroll horizontal AQUÍ */
   padding: 2rem;
-  margin-left: 260px; /* Ancho del sidebar */
+  margin-left: var(--sidebar-width); /* Espacio para sidebar en desktop */
   transition: margin-left 0.3s ease;
+  width: calc(100% - var(--sidebar-width)); /* Ancho exacto restante */
 }
 
 /* --- SIDEBAR ESTILOS --- */
 .sidebar {
-  position: fixed;
+  position: absolute; /* Absolute dentro de relative .app-layout funciona mejor a veces */
   left: 0;
   top: 0;
   bottom: 0;
-  width: 260px;
+  width: var(--sidebar-width);
   background-color: white;
-  box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+  box-shadow: 4px 0 15px rgba(0,0,0,0.05);
   display: flex;
   flex-direction: column;
-  z-index: 90;
+  z-index: 1000;
   transition: transform 0.3s ease;
 }
 
 .sidebar-header {
   padding: 1.5rem;
   border-bottom: 1px solid #f0f0f0;
+  /* Asegura que el header no se achique */
+  flex-shrink: 0; 
 }
 
 .sidebar-user {
@@ -42,10 +81,11 @@
   background: #f8f9fa;
   margin: 1rem;
   border-radius: 12px;
+  flex-shrink: 0;
 }
 
 .user-avatar {
-  width: 40px;
+  min-width: 40px;
   height: 40px;
   background: #2c3e50;
   color: white;
@@ -57,7 +97,8 @@
   font-size: 1.2rem;
 }
 
-.user-info p { margin: 0; font-weight: 600; color: #2c3e50; }
+.user-info { overflow: hidden; }
+.user-info p { margin: 0; font-weight: 600; color: #2c3e50; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-role { font-size: 0.8rem; color: #7f8c8d; text-transform: uppercase; }
 
 .sidebar-nav {
@@ -66,6 +107,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  overflow-y: auto; /* Scroll interno para el menú si es muy largo */
 }
 
 .nav-link {
@@ -78,21 +120,27 @@
   border-radius: 8px;
   transition: all 0.2s;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .nav-link:hover { background-color: #f1f3f5; color: #2c3e50; }
 .nav-link.active {
   background-color: #e3f2fd;
-  color: #007bff; /* Azul corporativo */
+  color: #007bff;
   font-weight: 600;
 }
 
-.sidebar-footer { padding: 1rem; border-top: 1px solid #f0f0f0; }
+.sidebar-footer { 
+  padding: 1rem; 
+  border-top: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
 
 .logout-btn {
   width: 100%;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   padding: 0.8rem 1rem;
   border: none;
@@ -103,30 +151,35 @@
   font-weight: 600;
   transition: background 0.2s;
 }
-.logout-btn:hover { background: #fecaca; }
+
+/* --- OVERLAY --- */
+.sidebar-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 900;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+}
+.sidebar-overlay.active { opacity: 1; visibility: visible; }
 
 /* --- RESPONSIVE (MÓVIL) --- */
 @media (max-width: 768px) {
   .main-content {
-    margin-left: 0; /* En móvil ocupa todo el ancho */
+    margin-left: 0 !important;
+    width: 100% !important; /* Ocupa todo el ancho en móvil */
     padding: 1rem;
-    padding-top: 4rem; /* Espacio para el botón hamburguesa */
+    padding-top: 4rem; /* Espacio para el botón de menú */
   }
 
   .sidebar {
-    transform: translateX(-100%); /* Oculto por defecto */
+    transform: translateX(-100%);
+    position: fixed; /* En móvil sí debe ser fixed para sobreponerse */
   }
-
+  
   .sidebar.open {
-    transform: translateX(0); /* Visible cuando está abierto */
-  }
-
-  .mobile-menu-btn {
-    display: flex !important; /* Mostrar botón solo en móvil */
-  }
-
-  .sidebar-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5); z-index: 80;
+    transform: translateX(0);
+    box-shadow: 5px 0 25px rgba(0,0,0,0.25);
   }
 }
