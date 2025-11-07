@@ -2,16 +2,21 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { LayoutDashboard, FilePlus, Users, LogOut, Menu, X } from 'lucide-react'
-import './Sidebar.css' // <-- IMPORTANTE: Importar el nuevo archivo CSS
+import { LayoutDashboard, FilePlus, Users, LogOut, Menu, X, Bell } from 'lucide-react' // --- NUEVO --- Importa 'Bell'
+import './Sidebar.css'
+// --- NUEVO --- Importamos la lógica de Push y Toasts
+import { subscribeToPushNotifications } from '../../utils/pushSubscription'
+import { toast } from 'react-hot-toast'
 
 const Sidebar = () => {
   const { user, role, signOut } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  
+  // --- NUEVO --- Estado para saber si ya está suscrito
+  const [isSubscribed, setIsSubscribed] = useState(Notification.permission === 'granted')
 
   const toggleSidebar = () => setIsOpen(!isOpen)
 
-  // Bloquear scroll cuando el menú móvil está abierto
   useEffect(() => {
     if (window.innerWidth <= 768 && isOpen) {
        document.body.style.overflow = 'hidden'
@@ -29,20 +34,33 @@ const Sidebar = () => {
     { to: '/crear-ticket', icon: <FilePlus size={20} />, label: 'Nuevo Reporte' },
   ]
 
+  // --- NUEVO --- Función para manejar el clic del botón
+  const handleSubscribe = async () => {
+    if (!user) return toast.error('Error: Usuario no encontrado');
+    
+    const toastId = toast.loading('Activando notificaciones...');
+    try {
+      await subscribeToPushNotifications(user);
+      toast.success('¡Notificaciones activadas!', { id: toastId });
+      setIsSubscribed(true); // Actualiza el estado del botón
+    } catch (error) {
+      console.error(error);
+      toast.error(`Error: ${error.message}`, { id: toastId });
+      setIsSubscribed(false); // Mantiene el estado como no suscrito
+    }
+  }
+
   return (
     <>
-      {/* Botón móvil ahora usa clase CSS */}
       <button onClick={toggleSidebar} className="mobile-menu-btn">
         {isOpen ? <X size={24} color="#2c3e50" /> : <Menu size={24} color="#2c3e50" />}
       </button>
 
-      {/* Overlay */}
       <div 
           className={`sidebar-overlay ${isOpen ? 'active' : ''}`}
           onClick={() => setIsOpen(false)}
       />
 
-      {/* Sidebar Principal */}
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <h2 className="sidebar-logo">
@@ -78,7 +96,34 @@ const Sidebar = () => {
           ))}
         </nav>
 
+        {/* --- MODIFICADO --- Footer del Sidebar */}
         <div className="sidebar-footer">
+          {/* Botón para activar notificaciones */}
+          <button 
+            onClick={handleSubscribe} 
+            disabled={isSubscribed} // Se deshabilita si ya tiene permiso
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              padding: '0.8rem 1rem',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: isSubscribed ? 'default' : 'pointer',
+              fontWeight: '600',
+              transition: 'background 0.2s',
+              marginBottom: '0.5rem', // Espacio entre botones
+              background: isSubscribed ? '#e8f5e9' : '#e0f2fe',
+              color: isSubscribed ? '#2e7d32' : '#0284c7',
+            }}
+          >
+            <Bell size={20} />
+            <span>{isSubscribed ? 'Notificaciones OK' : 'Activar Avisos'}</span>
+          </button>
+          
+          {/* Botón de Cerrar Sesión (sin cambios) */}
           <button onClick={() => { setIsOpen(false); signOut(); }} className="logout-btn">
             <LogOut size={20} />
             <span>Cerrar Sesión</span>

@@ -3,14 +3,18 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
-// IMPORTANTE: Importamos el AuthProvider
 import { AuthProvider } from './context/AuthContext.jsx'
+// --- NUEVO --- Importar el NotificationProvider
+import { NotificationProvider } from './context/NotificationContext.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    {/* Envolvemos la App con el AuthProvider */}
+    {/* AuthProvider envuelve todo */}
     <AuthProvider>
-      <App />
+      {/* NotificationProvider DEBE estar DENTRO de AuthProvider */}
+      <NotificationProvider>
+        <App />
+      </NotificationProvider>
     </AuthProvider>
   </React.StrictMode>,
 )
