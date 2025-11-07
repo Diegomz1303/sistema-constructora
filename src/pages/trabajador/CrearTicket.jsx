@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../services/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { Toaster, toast } from 'react-hot-toast'
-import { Camera, UploadCloud, X } from 'lucide-react'
+import { Camera, UploadCloud, X, UserCircle2 } from 'lucide-react'
 
 const CrearTicket = () => {
   const navigate = useNavigate()
@@ -13,23 +13,25 @@ const CrearTicket = () => {
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [location, setLocation] = useState({ lat: null, lng: null, error: null })
+  const [engineers, setEngineers] = useState([])
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     priority: 'media',
-    type: 'material'
+    type: 'material',
+    assigned_to: ''
   })
 
   // --- ESTILOS COMUNES ---
- const containerStyle = {
-    // CAMBIO CLAVE: Aumentamos de '700px' a '1000px' (o el valor que prefieras)
+  const containerStyle = {
     maxWidth: '1000px',
-    width: '95%', // Esto asegura que en móviles no toque los bordes
+    width: '95%',
     margin: '0 auto',
-    padding: '3rem', // Aumentamos un poco el padding para que se vea más espacioso
+    // Padding responsivo: menos en móvil, más en desktop
+    padding: window.innerWidth < 768 ? '1.5rem' : '3rem',
     backgroundColor: '#ffffff',
-    borderRadius: '24px', // Bordes un poco más redondeados para un look más moderno
+    borderRadius: '24px',
     boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)'
   }
 
@@ -56,16 +58,25 @@ const CrearTicket = () => {
   useEffect(() => {
     if (!("geolocation" in navigator)) {
       setLocation(prev => ({ ...prev, error: "No soportado" }))
-      return
+    } else {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, error: null }),
+        (err) => {
+          console.error("Error GPS:", err);
+          setLocation(prev => ({ ...prev, error: "Ubicación no disponible" }))
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      )
     }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, error: null }),
-      (err) => {
-        console.error("Error GPS:", err);
-        setLocation(prev => ({ ...prev, error: "Ubicación no disponible" }))
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    )
+
+    const fetchEngineers = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .eq('role', 'ingeniero')
+      if (data) setEngineers(data)
+    }
+    fetchEngineers()
   }, [])
 
   useEffect(() => {
@@ -92,9 +103,9 @@ const CrearTicket = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.title.trim() || !formData.description.trim()) return toast.error('Falta título o descripción')
-    
+    if (!formData.assigned_to) return toast.error('Debes asignar un ingeniero')
+
     setLoading(true)
-    // CORREGIDO: const en lugar de constOX
     const toastId = toast.loading('Enviando reporte...')
 
     try {
@@ -116,7 +127,8 @@ const CrearTicket = () => {
         user_email: user.email,
         image_url: finalImageUrl,
         latitude: location.lat,
-        longitude: location.lng
+        longitude: location.lng,
+        assigned_to: formData.assigned_to
       }])
 
       if (insertError) throw insertError
@@ -130,7 +142,7 @@ const CrearTicket = () => {
   }
 
   return (
-    <div style={{ padding: '2rem 1rem', minHeight: '100%', display: 'flex', justifyContent: 'center' }}>
+    <div style={{ padding: '1rem', minHeight: '100%', display: 'flex', justifyContent: 'center' }}>
       <Toaster position="top-center" />
 
       <div style={containerStyle} className="animate-fade-in">
@@ -138,7 +150,7 @@ const CrearTicket = () => {
           <div style={{ display: 'inline-flex', padding: '12px', background: '#eff6ff', borderRadius: '50%', marginBottom: '1rem' }}>
             <Camera size={32} color="#3b82f6" />
           </div>
-          <h1 style={{ fontSize: '1.8rem', color: '#1e293b', margin: '0 0 0.5rem 0', fontWeight: '800' }}>Nuevo Reporte</h1>
+          <h1 style={{ fontSize: '1.5rem', color: '#1e293b', margin: '0 0 0.5rem 0', fontWeight: '800' }}>Nuevo Reporte</h1>
           
           <div style={{ 
             display: 'inline-flex', alignItems: 'center', gap: '6px', 
@@ -147,29 +159,27 @@ const CrearTicket = () => {
             color: location.lat ? '#166534' : '#991b1b'
           }}>
             <span>{location.lat ? '📍' : '⚠️'}</span>
-            {location.lat 
-              ? `Ubicación detectada` 
-              : location.error || "Buscando GPS..."}
+            {location.lat ? `Ubicación detectada` : location.error || "Buscando GPS..."}
           </div>
         </header>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.8rem' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
           <div>
             <label style={labelStyle}>¿Qué tipo de reporte es?</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.8rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
               {['material', 'incidencia', 'duda'].map((type) => (
                 <label key={type} style={{
-                  padding: '1rem',
+                  padding: '0.8rem',
                   border: formData.type === type ? '2px solid #3b82f6' : '2px solid #e2e8f0',
                   backgroundColor: formData.type === type ? '#eff6ff' : 'white',
                   borderRadius: '12px', cursor: 'pointer', textAlign: 'center',
                   transition: 'all 0.2s', fontWeight: '600',
                   color: formData.type === type ? '#1d4ed8' : '#64748b',
-                  textTransform: 'capitalize'
+                  textTransform: 'capitalize', fontSize: '0.9rem'
                 }}>
                   <input type="radio" name="type" value={type} checked={formData.type === type} onChange={handleChange} style={{ display: 'none' }} />
-                  <span style={{ display: 'block', fontSize: '1.5rem', marginBottom: '0.3rem' }}>
+                  <span style={{ display: 'block', fontSize: '1.4rem', marginBottom: '0.2rem' }}>
                     {type === 'material' ? '🧱' : type === 'incidencia' ? '⚠️' : '❓'}
                   </span>
                   {type}
@@ -178,31 +188,49 @@ const CrearTicket = () => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gap: '1.2rem' }}>
-            <div>
+          {/* --- CAMBIO CLAVE PARA RESPONSIVE --- */}
+          {/* Usamos flex-wrap para que caigan en una columna si no hay espacio */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
+            
+            {/* Asunto: Ocupa todo el ancho disponible, mínimo 300px */}
+            <div style={{ flex: '1 1 300px' }}>
               <label style={labelStyle}>Asunto Principal *</label>
               <input 
-                type="text" 
-                name="title" 
-                placeholder="Ej: Falta cemento en Zona B" 
-                value={formData.title} 
-                onChange={handleChange} 
-                maxLength={60}
+                type="text" name="title" placeholder="Ej: Falta cemento en Zona B" 
+                value={formData.title} onChange={handleChange} maxLength={60}
                 style={{ ...inputStyle, fontSize: '1.1rem', fontWeight: '500' }}
-                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
               />
             </div>
 
-            <div>
+            {/* Prioridad y Asignación: Intentan compartir fila, si no caben, saltan */}
+            <div style={{ flex: '1 1 150px' }}>
               <label style={labelStyle}>Prioridad</label>
-              <select name="priority" value={formData.priority} onChange={handleChange} 
-                style={{ ...inputStyle, appearance: 'none', backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23333%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '0.8rem' }}
-              >
+              <select name="priority" value={formData.priority} onChange={handleChange} style={inputStyle}>
                 <option value="baja">🟢 Baja</option>
                 <option value="media">🟡 Media</option>
                 <option value="alta">🔴 Alta</option>
               </select>
+            </div>
+
+            <div style={{ flex: '1 1 200px' }}>
+               <label style={labelStyle}>Asignar a *</label>
+               <div style={{ position: 'relative' }}>
+                 <UserCircle2 size={20} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                 <select 
+                    name="assigned_to" 
+                    value={formData.assigned_to} 
+                    onChange={handleChange}
+                    style={{ ...inputStyle, paddingLeft: '2.5rem' }}
+                    required
+                 >
+                   <option value="">Seleccionar...</option>
+                   {engineers.map(eng => (
+                     <option key={eng.id} value={eng.id}>
+                        {eng.email ? eng.email.split('@')[0] : 'Ingeniero'}
+                     </option>
+                   ))}
+                 </select>
+               </div>
             </div>
           </div>
 
@@ -210,36 +238,23 @@ const CrearTicket = () => {
             <label style={labelStyle}>Evidencia Fotográfica</label>
             {!imageFile ? (
               <label style={{ 
-                border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '2rem',
+                border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '1.5rem',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                gap: '1rem', cursor: 'pointer', backgroundColor: '#f8fafc', transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
-              onMouseOut={(e) => e.currentTarget.style.borderColor = '#cbd5e1'}
-              >
+                gap: '0.8rem', cursor: 'pointer', backgroundColor: '#f8fafc', transition: 'all 0.2s'
+              }}>
                 <input type="file" accept="image/*" onChange={handleFileChange} hidden />
-                <div style={{ background: '#e0f2fe', padding: '1rem', borderRadius: '50%' }}>
-                  <UploadCloud size={30} color="#0ea5e9" />
+                <div style={{ background: '#e0f2fe', padding: '0.8rem', borderRadius: '50%' }}>
+                  <UploadCloud size={24} color="#0ea5e9" />
                 </div>
-                <div style={{ textAlign: 'center', color: '#64748b' }}>
-                  <span style={{ color: '#0ea5e9', fontWeight: '600' }}>Haz clic para subir</span> una foto
-                  <p style={{ fontSize: '0.8rem', margin: '0.5rem 0 0 0', opacity: 0.7 }}>JPG, PNG (Máx 5MB)</p>
+                <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                  <span style={{ color: '#0ea5e9', fontWeight: '600' }}>Toca para subir foto</span>
                 </div>
               </label>
             ) : (
               <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '2px solid #e2e8f0' }}>
-                <img src={imagePreview} alt="Preview" style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', display: 'block' }} />
-                <button 
-                  type="button"
-                  onClick={removeImage}
-                  style={{ 
-                    position: 'absolute', top: '10px', right: '10px',
-                    background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none',
-                    borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}
-                >
-                  <X size={18} />
+                <img src={imagePreview} alt="Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', display: 'block' }} />
+                <button type="button" onClick={removeImage} style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={16} />
                 </button>
               </div>
             )}
@@ -247,48 +262,15 @@ const CrearTicket = () => {
 
           <div>
             <label style={labelStyle}>Detalles Adicionales *</label>
-            <textarea 
-              name="description" 
-              rows="4" 
-              placeholder="Describe el problema con el mayor detalle posible..." 
-              value={formData.description} 
-              onChange={handleChange} 
-              style={{ ...inputStyle, resize: 'vertical', minHeight: '100px', lineHeight: '1.5' }}
-              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
-            />
+            <textarea name="description" rows="4" placeholder="Describe el problema..." value={formData.description} onChange={handleChange} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px' }} />
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9' }}>
-            <button 
-              type="button" 
-              onClick={() => navigate('/dashboard')} 
-              style={{ 
-                flex: 1, padding: '1rem', border: 'none', borderRadius: '12px',
-                backgroundColor: '#f1f5f9', color: '#64748b', fontWeight: '700', fontSize: '1rem',
-                cursor: 'pointer', transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#e2e8f0'}
-              onMouseOut={(e) => e.target.style.backgroundColor = '#f1f5f9'}
-            >
+            <button type="button" onClick={() => navigate('/dashboard')} style={{ flex: 1, padding: '0.8rem', border: 'none', borderRadius: '12px', backgroundColor: '#f1f5f9', color: '#64748b', fontWeight: '700', fontSize: '1rem', cursor: 'pointer' }}>
               Cancelar
             </button>
-            <button 
-              type="submit" 
-              disabled={loading} 
-              style={{ 
-                flex: 2, padding: '1rem', border: 'none', borderRadius: '12px',
-                backgroundColor: loading ? '#94a3b8' : '#3b82f6', 
-                color: 'white', fontWeight: '700', fontSize: '1rem',
-                cursor: loading ? 'not-allowed' : 'pointer', 
-                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
-                transition: 'transform 0.2s',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-              }}
-              onMouseOver={(e) => !loading && (e.currentTarget.style.transform = 'translateY(-2px)')}
-              onMouseOut={(e) => !loading && (e.currentTarget.style.transform = 'translateY(0)')}
-            >
-              {loading ? 'Enviando...' : <>Enviar Reporte 🚀</>}
+            <button type="submit" disabled={loading} style={{ flex: 2, padding: '0.8rem', border: 'none', borderRadius: '12px', backgroundColor: loading ? '#94a3b8' : '#3b82f6', color: 'white', fontWeight: '700', fontSize: '1rem', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              {loading ? 'Enviando...' : <>Enviar 🚀</>}
             </button>
           </div>
 
