@@ -118,8 +118,22 @@ const Dashboard = () => {
         ))}
       </div>
 
+      {/* --- INICIO DE LA MODIFICACIÓN --- */}
+      {/* 1. Muestra "Cargando..." */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: '#999' }}>Cargando tickets...</div>
+      
+      /* 2. (NUEVO) Si no está cargando Y no hay tickets, muestra el aviso */
+      ) : tickets.length === 0 ? (
+         <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'white', borderRadius: '16px', color: '#b0bec5', boxShadow: '0 4px 6px rgba(0,0,0,0.04)' }}>
+            <span style={{ fontSize: '4rem', display: 'block', marginBottom: '1rem', opacity: 0.5 }}>📭</span>
+            <h3 style={{ margin: 0, color: '#546e7a' }}>Bandeja Vacía</h3>
+            <p style={{ fontSize: '1rem', margin: '0.5rem 0 0 0' }}>
+              No hay reportes en la vista de "{filter}".
+            </p>
+         </div>
+
+      /* 3. Si no está cargando Y SÍ hay tickets, muestra la lista */
       ) : (
          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
             {tickets.map(ticket => (
@@ -131,6 +145,8 @@ const Dashboard = () => {
             ))}
          </div>
       )}
+      {/* --- FIN DE LA MODIFICACIÓN --- */}
+
 
       {/* MODAL DETALLES (Actualizado con botón de derivar) */}
       <Modal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="📝 Detalles del Reporte">
@@ -165,7 +181,7 @@ const Dashboard = () => {
       {/* NUEVO MODAL: Derivar Ticket */}
       <Modal isOpen={isDeriveOpen} onClose={() => setIsDeriveOpen(false)} title="↪️ Derivar Ticket">
         <div>
-           <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>Selecciona el ingeniero al que deseas transferir este reporte.</p>
+           <p style={{ color: '#64748b', marginBottom: '1.L5rem' }}>Selecciona el ingeniero al que deseas transferir este reporte.</p>
            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
              {engineers.length > 0 ? engineers.map(eng => (
                <button 
@@ -190,7 +206,7 @@ const Dashboard = () => {
          {selectedTicket && (
           <div>
             <textarea value={responseText} onChange={e=>setResponseText(e.target.value)} rows={4} style={{width:'100%', padding:'1rem', borderRadius:'12px', border:'2px solid #e2e8f0', marginBottom:'1.5rem', fontFamily:'inherit', resize:'vertical', fontSize:'1rem'}} placeholder="Respuesta oficial..." />
-            <div style={{display:'flex', gap:'1rem'}}>
+            <div style={{display:'flex', gap:'1Vrem'}}>
                 <button onClick={()=>handleUpdateStatus('rechazado')} style={{flex:1, padding:'1rem', background:'white', color:'#e74c3c', border:'2px solid #e74c3c', borderRadius:'12px', fontWeight:'bold', cursor:'pointer'}}>❌ Rechazar</button>
                 <button onClick={()=>handleUpdateStatus('aprobado')} style={{flex:2, padding:'1rem', background:'#27ae60', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', cursor:'pointer'}}>✅ Aprobar</button>
             </div>
